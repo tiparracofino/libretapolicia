@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Libreta">
+    
+    <title>Libreta de Policía</title>
+
+    <!-- Fuente de máquina (Libreta) y Fuente a Mano (Casete) -->
+    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Permanent+Marker&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body {
+            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+            overscroll-behavior-y: none; background-color: #1a1512; transition: background-color 0.5s ease;
+        }
+
+        .typewriter-font { font-family: 'Special Elite', cursive; }
+        .handwritten-font { font-family: 'Permanent Marker', cursive; } /* Nueva fuente de rotulador */
+
+        /* MODO FLEXO */
+        body.flexo-mode { background-color: #050403; }
+        body.flexo-mode .leather-cover {
+            background-color: #2a1a16; box-shadow: inset 0 0 40px rgba(0,0,0,0.95), 0 0 50px rgba(255, 180, 50, 0.05);
+        }
+        body.flexo-mode .paper-container { background-color: #d1bfae; }
+        body.flexo-mode textarea { color: #1a1510; }
+
+        /* Cubierta de Piel */
+        .leather-cover {
+            background-color: #3e2723;
+            background-image: radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%),
+                url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100" height="100" filter="url(%23noise)" opacity="0.12"/></svg>');
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.9);
+        }
+
+        .stitched-border { border: 2px dashed rgba(255, 255, 255, 0.15); border-radius: 16px; }
+
+        /* El Papel */
+        .paper-container {
+            background-color: #fdfbf7; box-shadow: inset 4px 0 10px rgba(0,0,0,0.1), 2px 4px 15px rgba(0,0,0,0.4);
+            position: relative; transition: background-color 0.5s ease;
+        }
+        .paper-lines {
+            background-image: repeating-linear-gradient(transparent, transparent 31px, rgba(100, 149, 237, 0.3) 31px, rgba(100, 149, 237, 0.3) 32px);
+            background-size: 100% 32px; background-attachment: local;
+        }
+        textarea {
+            -webkit-user-select: text; user-select: text; resize: none; outline: none; background: transparent;
+            line-height: 32px; color: #1e293b; padding-top: 4px;
+        }
+
+        /* SELLO CLASIFICADO */
+        textarea.classified { color: #111; background-color: #111; border-radius: 4px; caret-color: transparent; }
+        .classified-stamp {
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg);
+            color: rgba(220, 38, 38, 0.85); border: 4px solid rgba(220, 38, 38, 0.85);
+            padding: 10px 20px; font-size: 2.2rem; font-weight: bold; letter-spacing: 4px;
+            pointer-events: none; opacity: 0; z-index: 10;
+        }
+        textarea.classified + .classified-stamp { opacity: 1; }
+
+        /* Doblez de página */
+        .page-curl {
+            position: absolute; bottom: 0; right: 0; width: 55px; height: 55px;
+            background: linear-gradient(135deg, #fdfbf7 0%, #e5e0d8 45%, #d1ccc2 50%, #b8b3a8 100%);
+            box-shadow: -3px -3px 5px rgba(0,0,0,0.2); cursor: pointer; z-index: 20;
+            clip-path: polygon(100% 0, 0 100%, 100% 100%);
+        }
+        .page-curl:active { width: 70px; height: 70px; }
+        .paper-corner-hide { clip-path: polygon(0 0, 100% 0, 100% calc(100% - 45px), calc(100% - 45px) 100%, 0 100%); }
+        @keyframes pageTurn { 0% { opacity: 1; transform: translateX(0); } 50% { opacity: 0; transform: translateX(-20px); } 51% { opacity: 0; transform: translateX(20px); } 100% { opacity: 1; transform: translateX(0); } }
+        .animating-page { animation: pageTurn 0.4s ease-in-out; }
+
+        /* Indicador de Grabación */
+        .recording-dot {
+            width: 12px; height: 12px; background-color: #ef4444; border-radius: 50%;
+            animation: pulseRecord 1s infinite;
+        }
+        @keyframes pulseRecord { 0% { opacity: 1; box-shadow: 0 0 8px #ef4444;} 50% { opacity: 0.3; box-shadow: none;} 100% { opacity: 1; box-shadow: 0 0 8px #ef4444;} }
+
+        /* ====== NUEVO DISEÑO: CASETE CLÁSICO DE MÚSICA ====== */
+        .evidence-box {
+            background-color: #111;
+            background-image: repeating-linear-gradient(45deg, #181818 25%, transparent 25%, transparent 75%, #181818 75%, #181818), repeating-linear-gradient(45deg, #181818 25%, #111 25%, #111 75%, #181818 75%, #181818);
+            background-position: 0 0, 10px 10px; background-size: 20px 20px;
+            box-shadow: inset 0 0 30px #000;
+        }
+
+        .cassette-tape {
+            /* Carcasa de plástico semitransparente típica */
+            background: linear-gradient(to bottom, #cfd0d1, #aeb0b3);
+            border-radius: 12px; 
+            border: 2px solid #888; 
+            padding: 10px;
+            box-shadow: 
+                0 10px 15px -3px rgba(0,0,0,0.8), 
+                inset 0 4px 6px rgba(255,255,255,0.8), /* Brillo superior del plástico */
+                inset 0 -4px 6px rgba(0,0,0,0.3);      /* Sombra inferior del plástico */
+            position: relative; 
+            width: 100%; 
+            height: 160px; /* Proporción clásica de casete */
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: flex-start;
+            transition: transform 0.1s;
+        }
+        .cassette-tape:active { transform: scale(0.98); }
+        
+        /* La pegatina central de papel (donde se escribe) */
+        .cassette-label {
+            position: absolute; 
+            top: 15px; 
+            width: 90%; 
+            height: 85px;
+            background-color: #f4e8d1; /* Papel viejo amarillento */
+            border-radius: 6px; 
+            z-index: 1;
+            /* Líneas horizontales gruesas como los casetes TDK */
+            background-image: 
+                linear-gradient(#f4e8d1 30%, transparent 30%, transparent 70%, #f4e8d1 70%),
+                linear-gradient(to right, #cf4040 0%, #cf4040 10%, #4050cf 10%, #4050cf 20%, transparent 20%);
+            background-size: 100% 20px, 100% 100%;
+            border: 1px solid #d0c0a0;
+            display: flex; 
+            flex-direction: column; 
+            justify-content: flex-start;
+            padding: 5px 15px; 
+            pointer-events: none;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        /* Texto escrito a rotulador en la pegatina */
+        .handwritten-text {
+            color: #1a1a24; /* Tinta de rotulador azul oscuro/negro */
+            font-size: 1.4rem;
+            line-height: 1.2;
+            transform: rotate(-2deg); /* Ligeramente torcido como si se escribiera rápido */
+            text-shadow: 0px 0px 1px rgba(0,0,0,0.2); /* Efecto de que la tinta cala */
+            margin-top: 15px;
+        }
+        
+        /* Ventanita central donde se ve la cinta */
+        .cassette-window {
+            background: rgba(0,0,0,0.8); /* Plástico oscuro */
+            border-radius: 8px; 
+            width: 60%; 
+            height: 45px;
+            border: 3px solid #666; 
+            border-top-color: #999;
+            border-bottom-color: #444;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            position: relative; 
+            z-index: 2; 
+            box-shadow: inset 0 0 15px #000;
+            margin-top: 65px; /* Colocado en la mitad inferior */
+            padding: 0 15px;
+        }
+        
+        /* La cinta magnética marrón de fondo */
+        .cassette-window::before {
+            content: ''; position: absolute; bottom: 5px; left: 15%; width: 70%; height: 18px;
+            background: linear-gradient(to bottom, #3a2218, #1a0e08); 
+            border-top: 1px solid #5a3a2a;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.5);
+        }
+        
+        /* Los engranajes hexagonales clásicos */
+        .cassette-wheel {
+            width: 28px; height: 28px; 
+            background: #e0e0e0; 
+            border-radius: 50%;
+            border: 2px solid #333; 
+            position: relative; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            box-shadow: 0 0 5px rgba(0,0,0,0.8);
+            z-index: 3;
+        }
+        /* El hexágono interno */
+        .cassette-wheel-inner {
+            width: 14px; height: 14px;
+            background: #222;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+        }
+        
+        /* Animación controlada por clase */
+        .is-playing .cassette-wheel { animation: spin 2s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        /* Tornillos de las esquinas */
+        .cassette-screw {
+            width: 8px; height: 8px; background: #666; border-radius: 50%; position: absolute;
+            box-shadow: inset -1px -1px 2px rgba(0,0,0,0.5), inset 1px 1px 2px rgba(255,255,255,0.8);
+        }
+        /* La ranura del tornillo (cruz) */
+        .cassette-screw::after {
+            content: ''; position: absolute; top: 3px; left: 1px; width: 6px; height: 2px;
+            background: #222; transform: rotate(45deg);
+        }
+        .screw-tl { top: 8px; left: 8px; } .screw-tr { top: 8px; right: 8px; }
+        .screw-bl { bottom: 8px; left: 8px; } .screw-br { bottom: 8px; right: 8px; }
+
+        /* Cinta inferior (la banda trapezoidal que toca el cabezal) */
+        .cassette-bottom {
+            position: absolute; bottom: 0; left: 15%; width: 70%; height: 20px;
+            background: linear-gradient(to bottom, #aeb0b3, #8a8c8e);
+            clip-path: polygon(10% 0, 90% 0, 100% 100%, 0 100%);
+            border-top: 1px solid #777;
+        }
+
+        /* Reproductor de audio nativo (Oculto pero funcional, ES EL QUE REPRODUCE) */
+        .native-audio-player {
+            position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; z-index: 10; cursor: pointer;
+        }
+
+        /* Controles nativos visibles (OPCIONAL, por si el transparente falla en Safari) */
+        .audio-controls-visible {
+            position: absolute; bottom: -50px; left: 0; width: 100%; z-index: 50;
+            display: none; /* Oculto por defecto, se muestra si se necesita debug */
+        }
+
+    </style>
+</head>
+<body class="h-screen w-screen flex items-center justify-center p-2 sm:p-6 text-slate-800">
+
+    <!-- LA LIBRETA (PANTALLA 1) -->
+    <div id="mainApp" class="leather-cover w-full h-full max-w-md rounded-2xl relative p-3 sm:p-4 flex flex-col overflow-hidden shadow-2xl">
+        <div class="stitched-border absolute inset-2 pointer-events-none"></div>
+
+        <div class="relative z-10 flex justify-between items-center px-2 py-2 mb-2">
+            <button id="flexoBtn" class="text-stone-400 hover:text-amber-400 p-2" title="Luz de Flexo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+            </button>
+            
+            <div id="pageHeader" class="text-stone-300 typewriter-font text-xl tracking-widest font-bold px-4 py-1">
+                PÁG <span id="pageNumber">1</span>
+            </div>
+            
+            <div class="flex gap-2">
+                <button id="recordBtn" class="text-stone-400 hover:text-red-500 p-2 flex items-center gap-1" title="Grabar Audio">
+                    <div id="recordIndicator" class="recording-dot hidden"></div>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                </button>
+                <button id="goToArchiveBtn" class="text-stone-400 hover:text-white p-2" title="Caja de Evidencias (Casetes)">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="paper-container flex-1 rounded-lg rounded-br-[40px] overflow-hidden relative paper-corner-hide" id="paperElement">
+            <div id="coffeeStain" class="coffee-stain"></div>
+
+            <div class="relative w-full h-full">
+                <textarea 
+                    id="notepad" 
+                    class="w-full h-full p-6 paper-lines typewriter-font text-xl sm:text-2xl" 
+                    spellcheck="false" 
+                    placeholder="Escriba aquí...&#10;Doble toque para censurar."></textarea>
+                <div class="classified-stamp typewriter-font">CLASIFICADO</div>
+            </div>
+            
+            <div class="page-curl" id="nextPageBtn" title="Página Siguiente"></div>
+        </div>
+        
+        <div class="flex justify-between items-center mt-4 relative z-10 px-4">
+            <button id="prevPageBtn" class="text-stone-400 p-2 disabled:opacity-30 flex items-center gap-1 text-sm font-bold tracking-wider">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg> VOLVER
+            </button>
+            <div class="text-stone-500 typewriter-font text-xs tracking-widest opacity-70">
+                NYPD - EVIDENCIA
+            </div>
+        </div>
+    </div>
+
+    <!-- EL ARCHIVADOR (PANTALLA 2 - LOS CASETES) -->
+    <div id="archiveApp" class="leather-cover w-full h-full max-w-md rounded-2xl relative p-4 flex flex-col overflow-hidden shadow-2xl hidden">
+        <div class="stitched-border absolute inset-2 pointer-events-none"></div>
+        
+        <div class="relative z-10 flex justify-between items-center mb-4">
+            <button id="backToNoteBtn" class="text-amber-500 flex items-center gap-1 font-bold typewriter-font">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg> LIBRETA
+            </button>
+            <h2 class="text-white typewriter-font text-xl tracking-widest border-b border-stone-600 pb-1">CASETES</h2>
+            <div class="w-8"></div>
+        </div>
+
+        <div class="evidence-box flex-1 rounded-lg overflow-y-auto p-4 border-2 border-[#111] shadow-inner relative">
+            <div id="cassetteList" class="flex flex-col gap-8 pb-10">
+                <!-- Se llenará dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- ESTADO GLOBAL ---
+        let currentPage = 1;
+        const totalPages = 100;
+        let notesData = {}; 
+        let recordingsData = []; 
+        let isClassified = false;
+        let isFlexoOn = false;
+
+        // --- DOM ---
+        const mainApp = document.getElementById('mainApp');
+        const archiveApp = document.getElementById('archiveApp');
+        const notepad = document.getElementById('notepad');
+        const pageNumberDisplay = document.getElementById('pageNumber');
+        const nextPageBtn = document.getElementById('nextPageBtn');
+        const prevPageBtn = document.getElementById('prevPageBtn');
+        const paperElement = document.getElementById('paperElement');
+        const coffeeStain = document.getElementById('coffeeStain');
+        
+        const flexoBtn = document.getElementById('flexoBtn');
+        const recordBtn = document.getElementById('recordBtn');
+        const recordIndicator = document.getElementById('recordIndicator');
+        const goToArchiveBtn = document.getElementById('goToArchiveBtn');
+        const backToNoteBtn = document.getElementById('backToNoteBtn');
+        const cassetteList = document.getElementById('cassetteList');
+
+        // --- INICIALIZACIÓN ---
+        function init() {
+            try {
+                const savedNotes = localStorage.getItem('detectiveNotesOnly');
+                if (savedNotes) notesData = JSON.parse(savedNotes);
+                
+                const savedRecordings = localStorage.getItem('detectiveAudios_v3'); // Cambio de Key
+                if (savedRecordings) recordingsData = JSON.parse(savedRecordings);
+                
+                const savedPage = localStorage.getItem('detectiveCurrentPage');
+                if (savedPage) currentPage = parseInt(savedPage);
+                
+                if (localStorage.getItem('detectiveFlexo') === 'true') toggleFlexo();
+            } catch (e) { console.error("Error", e); }
+            
+            loadPage(currentPage);
+        }
+
+        function loadPage(pageNum) {
+            pageNumberDisplay.textContent = pageNum;
+            prevPageBtn.disabled = pageNum === 1;
+            notepad.value = notesData[pageNum] || '';
+            localStorage.setItem('detectiveCurrentPage', pageNum);
+            
+            if (isClassified) toggleClassified();
+            
+            if (Math.random() < 0.15) {
+                coffeeStain.style.opacity = '1';
+                coffeeStain.style.top = Math.random() * 60 + '%';
+                coffeeStain.style.left = Math.random() * 60 + '%';
+                coffeeStain.style.transform = `rotate(${Math.random() * 360}deg)`;
+            } else {
+                coffeeStain.style.opacity = '0';
+            }
+        }
+
+        function saveCurrentPage() {
+            notesData[currentPage] = notepad.value;
+            localStorage.setItem('detectiveNotesOnly', JSON.stringify(notesData));
+        }
+
+        function turnPage(direction) {
+            saveCurrentPage();
+            let newPage = currentPage + direction;
+            if (newPage < 1) newPage = 1;
+            if (newPage > totalPages) newPage = totalPages;
+            
+            if (newPage !== currentPage) {
+                paperElement.classList.add('animating-page');
+                playPaperSound();
+                setTimeout(() => { currentPage = newPage; loadPage(currentPage); }, 200);
+                setTimeout(() => { paperElement.classList.remove('animating-page'); }, 400);
+            }
+        }
+
+        // --- NAVEGACIÓN ---
+        goToArchiveBtn.addEventListener('click', () => {
+            saveCurrentPage();
+            mainApp.classList.add('hidden');
+            archiveApp.classList.remove('hidden');
+            renderCassettes();
+        });
+
+        backToNoteBtn.addEventListener('click', () => {
+            // Pausar audios al salir
+            document.querySelectorAll('.native-audio-player').forEach(audio => {
+                audio.pause();
+            });
+            document.querySelectorAll('.cassette-tape').forEach(c => c.classList.remove('is-playing'));
+            
+            archiveApp.classList.add('hidden');
+            mainApp.classList.remove('hidden');
+        });
+
+        // --- GRABACIÓN NATIVA EXTREMA (PARA SAFARI iOS) ---
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+
+        recordBtn.addEventListener('click', async () => {
+            if (isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                recordIndicator.classList.add('hidden');
+                recordBtn.style.color = '#a8a29e';
+                
+                setTimeout(() => { goToArchiveBtn.click(); }, 500);
+
+            } else {
+                try {
+                    // Pedir permiso y stream (iOS requiere que esto pase tras un click directo del usuario)
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    
+                    // Comprobación de tipos MIME soportados (Safari a veces falla con webm)
+                    let options = {};
+                    if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                        options = { mimeType: 'audio/mp4' };
+                    } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                        options = { mimeType: 'audio/webm' };
+                    }
+
+                    mediaRecorder = new MediaRecorder(stream, options);
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+                    
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/mp4' });
+                        
+                        const reader = new FileReader();
+                        reader.readAsDataURL(audioBlob);
+                        reader.onloadend = () => {
+                            const base64Audio = reader.result;
+                            
+                            // Formato de rotulador: "Pág 12 - 24/03"
+                            const now = new Date();
+                            const handwrittenDate = `Pag. ${currentPage} - ${now.getDate()}/${now.getMonth()+1}`;
+
+                            const newRecord = {
+                                id: Date.now(),
+                                labelText: handwrittenDate,
+                                audioBase64: base64Audio
+                            };
+
+                            recordingsData.unshift(newRecord); 
+                            
+                            try {
+                                localStorage.setItem('detectiveAudios_v3', JSON.stringify(recordingsData));
+                            } catch(e) {
+                                alert("Memoria llena. Intenta borrar audios antiguos.");
+                                recordingsData.shift(); 
+                            }
+                            if(!archiveApp.classList.contains('hidden')) {
+                                renderCassettes();
+                            }
+                        }
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    recordIndicator.classList.remove('hidden');
+                    recordBtn.style.color = '#ef4444'; 
+                } catch (err) {
+                    alert("Se necesita acceso al micrófono.\n1. Guarda la web en 'Pantalla de Inicio'.\n2. O ve a Ajustes > Safari > Micrófono > Permitir.");
+                }
+            }
+        });
+
+        // --- RENDERIZADO DEL CASETE TIPO MÚSICA ---
+        function renderCassettes() {
+            cassetteList.innerHTML = '';
+            
+            if (recordingsData.length === 0) {
+                cassetteList.innerHTML = '<p class="text-stone-500 text-center mt-10 typewriter-font text-lg">SIN GRABACIONES.</p>';
+                return;
+            }
+
+            recordingsData.forEach(rec => {
+                const cassetteHTML = document.createElement('div');
+                cassetteHTML.className = 'cassette-tape mb-4';
+                cassetteHTML.id = `cassette-${rec.id}`;
+                
+                cassetteHTML.innerHTML = `
+                    <div class="cassette-screw screw-tl"></div>
+                    <div class="cassette-screw screw-tr"></div>
+                    
+                    <!-- Pegatina con texto a mano -->
+                    <div class="cassette-label">
+                        <div class="w-full text-center handwritten-text handwritten-font">
+                            ${rec.labelText}
+                        </div>
+                    </div>
+                    
+                    <!-- Ventana central transparente -->
+                    <div class="cassette-window">
+                        <div class="cassette-wheel">
+                            <div class="cassette-wheel-inner"></div>
+                        </div>
+                        <div class="cassette-wheel">
+                            <div class="cassette-wheel-inner"></div>
+                        </div>
+                    </div>
+
+                    <!-- Plástico inferior -->
+                    <div class="cassette-bottom"></div>
+                    
+                    <div class="cassette-screw screw-bl"></div>
+                    <div class="cassette-screw screw-br"></div>
+                    
+                    <!-- REPRODUCTOR NATIVO (Crucial para iOS) -->
+                    <!-- Opacity 0 lo hace invisible pero clickable en toda el área del casete -->
+                    <audio class="native-audio-player" controls preload="metadata">
+                        <source src="${rec.audioBase64}">
+                    </audio>
+
+                    <!-- Botón de borrar -->
+                    <button class="absolute bottom-1 right-2 text-[#444] hover:text-red-500 z-30 delete-btn p-1" data-id="${rec.id}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
+                `;
+
+                // Configurar lógica del Audio Nativo
+                const audioEl = cassetteHTML.querySelector('.native-audio-player');
+                
+                // Conectar eventos nativos con la animación visual de las ruedas
+                audioEl.addEventListener('play', () => {
+                    document.querySelectorAll('.native-audio-player').forEach(otherAudio => {
+                        if(otherAudio !== audioEl) {
+                            otherAudio.pause();
+                            otherAudio.closest('.cassette-tape').classList.remove('is-playing');
+                        }
+                    });
+                    cassetteHTML.classList.add('is-playing');
+                });
+
+                audioEl.addEventListener('pause', () => { cassetteHTML.classList.remove('is-playing'); });
+                audioEl.addEventListener('ended', () => { cassetteHTML.classList.remove('is-playing'); });
+
+                // Lógica de borrado
+                const delBtn = cassetteHTML.querySelector('.delete-btn');
+                delBtn.addEventListener('click', (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    if(confirm("¿Tirar casete a la basura?")) {
+                        recordingsData = recordingsData.filter(r => r.id !== rec.id);
+                        localStorage.setItem('detectiveAudios_v3', JSON.stringify(recordingsData));
+                        renderCassettes();
+                    }
+                });
+
+                cassetteList.appendChild(cassetteHTML);
+            });
+        }
+
+
+        // --- UTILIDADES ---
+        function toggleFlexo() {
+            isFlexoOn = !isFlexoOn;
+            document.body.classList.toggle('flexo-mode');
+            localStorage.setItem('detectiveFlexo', isFlexoOn);
+            flexoBtn.style.color = isFlexoOn ? '#fbbf24' : '#a8a29e'; 
+        }
+        flexoBtn.addEventListener('click', toggleFlexo);
+
+        function toggleClassified() {
+            isClassified = !isClassified;
+            if (isClassified) { notepad.classList.add('classified'); notepad.blur(); } 
+            else { notepad.classList.remove('classified'); }
+        }
+        notepad.addEventListener('dblclick', toggleClassified);
+
+        notepad.addEventListener('input', saveCurrentPage);
+        nextPageBtn.addEventListener('click', () => turnPage(1));
+        nextPageBtn.addEventListener('touchstart', (e) => { e.preventDefault(); turnPage(1); }, {passive: false});
+        prevPageBtn.addEventListener('click', () => turnPage(-1));
+
+        notepad.addEventListener('keydown', (e) => {
+            if (isClassified) { e.preventDefault(); return; } 
+            if (e.key.length === 1 || e.key === 'Enter' || e.key === 'Backspace') {
+                if (e.key === 'Enter') playReturnSound();
+                else playTypewriterSound();
+            }
+        });
+
+        // Audio de teclado
+        let synthCtx;
+        function initSynth() {
+            if (!synthCtx) synthCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (synthCtx.state === 'suspended') synthCtx.resume();
+            return synthCtx;
+        }
+
+        function playTypewriterSound() {
+            try {
+                const ctx = initSynth(); const osc = ctx.createOscillator(); const gain = ctx.createGain();
+                osc.type = 'square'; osc.frequency.setValueAtTime(100 + Math.random() * 50, ctx.currentTime); 
+                gain.gain.setValueAtTime(0.04, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
+                osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.04);
+            } catch (e) {}
+        }
+
+        function playReturnSound() {
+             try {
+                const ctx = initSynth(); const osc = ctx.createOscillator(); const gain = ctx.createGain();
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, ctx.currentTime); 
+                osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.08, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+                osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.15);
+            } catch (e) {}
+        }
+
+        function playPaperSound() {
+             try {
+                const ctx = initSynth(); const bufferSize = ctx.sampleRate * 0.15;
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate); const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                const noise = ctx.createBufferSource(); noise.buffer = buffer;
+                const filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 800;
+                const gain = ctx.createGain(); gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                noise.connect(filter); filter.connect(gain); gain.connect(ctx.destination); noise.start();
+            } catch (e) {}
+        }
+
+        // Arrancar
+        init();
+    </script>
+</body>
+</html>
+
+
